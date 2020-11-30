@@ -145,3 +145,4 @@ frames/
 assets/
 .idea/
 __pycache__/
+logs/

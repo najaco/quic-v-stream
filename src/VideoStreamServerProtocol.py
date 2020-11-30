@@ -50,7 +50,7 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
             print(f"Data = {data}")
             query = data.split()
             if query[0] == "GET":
-                file_path_mp4: Path = FILES_PATH / f"{query[1]}.mp4"
+                file_path_mp4: Path = FILES_PATH / f"{query[1]}"
                 if not file_path_mp4.exists():
                     logging.warning(f"{str(file_path_mp4)} does not exist")
                     self._quic.send_stream_data(
@@ -59,9 +59,9 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
                         end_stream=True,
                     )
                     return
-
+                file_no_extension = query[1][0:query[1].rfind(".")]
                 cl_ffmpeg(
-                    file_path_mp4, CACHE_PATH, file_prefix=query[1]
+                    file_path_mp4, CACHE_PATH, file_prefix=file_no_extension
                 )  # CL Call to ffmpeg
-                self.send_frames(files_path=FILES_PATH, file_name=query[1], event=event)
+                self.send_frames(files_path=FILES_PATH, file_name=file_no_extension, event=event)
                 self._quic.send_stream_data(event.stream_id, b"", end_stream=True)

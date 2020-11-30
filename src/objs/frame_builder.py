@@ -40,7 +40,7 @@ class FrameBuilder:
         return b"".join(x for x in self.data_arr)
 
     def to_frame(self):
-        return Frame(self.get_data_as_bytes())
+        return Frame(data=self.get_data_as_bytes())
 
     def to_dict(self) -> Dict:
         """

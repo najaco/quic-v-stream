@@ -4,42 +4,24 @@ import configparser
 import logging
 import shutil
 import signal
-from pathlib import Path
-from typing import Dict, Optional
 import sys
+from pathlib import Path
 
-from aioquic.asyncio import QuicConnectionProtocol, serve
-from aioquic.quic import events
+from aioquic.asyncio import serve
 from aioquic.quic.configuration import QuicConfiguration
-from aioquic.quic.connection import QuicConnection
-from aioquic.quic.events import ProtocolNegotiated, QuicEvent, StreamDataReceived
-from aioquic.tls import SessionTicket
-import os
+
 from src.VideoStreamServerProtocol import VideoStreamServerProtocol
-from src.objs import Frame
 
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-HOST = '127.0.0.1'
-PORT = 40205
-LOG_LOCATION = './logs/'
-FILE_DIR = "./assets/"
-ENCODING = "ascii"
-MAX_DATAGRAM_SIZE = 65536
 config = configparser.ConfigParser()
 config.read("config.ini")
-MAX_PKT_SIZE: int = int(config["DEFAULT"]["MaxPacketSize"])
-MAX_DATA_SIZE = MAX_PKT_SIZE - 4 * 6
-PRIORITY_THRESHOLD: Frame.Priority = Frame.Priority(
-    int(config["DEFAULT"]["PriorityThreshold"])
-)
-CACHE_PATH: str = config["SERVER"]["CachePath"]
-SLEEP_TIME = float(config["SERVER"]["SleepTime"])
-RETR_TIME = int(config["SERVER"]["RetransmissionTime"])
-RETR_INTERVAL = float(config["SERVER"]["RetransmissionInterval"])
+MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
+LOG_PATH: Path = Path(config["SERVER"]["LogPath"])
+CACHE_PATH: Path = Path(config["SERVER"]["CachePath"])
 
 
 def clean_up(sig, frame):
@@ -47,27 +29,17 @@ def clean_up(sig, frame):
     sys.exit(0)
 
 
-def cl_ffmpeg(file_path: str, cache_path: str):
-    if not os.path.exists(cache_path):
-        os.mkdir(cache_path)
-    elif not os.path.isdir(cache_path):
-        raise Exception(
-            "{} must not already exist as a non directory".format(cache_path)
-        )
-    cmd = "ffmpeg -i {} -f image2 -c:v copy -bsf h264_mp4toannexb {}%d.h264".format(
-        file_path, cache_path
-    )
-    os.system(cmd)
-
-
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, clean_up)
+    signal.signal(signal.SIGINT, clean_up)  # set ctrl-c signal
 
-    Path(LOG_LOCATION).mkdir(parents=True, exist_ok=True)  # create directory if it does not exist
-    Path(CACHE_PATH).mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(filename=f'{LOG_LOCATION}{config["SERVER"]["LogPath"]}', level=logging.INFO)
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
-    configuration = QuicConfiguration(is_client=False, max_datagram_frame_size=MAX_DATAGRAM_SIZE)
+    logging.basicConfig(filename=str(LOG_PATH), level=logging.INFO)
+
+    configuration = QuicConfiguration(
+        is_client=False, max_datagram_frame_size=MAX_DATAGRAM_SIZE
+    )
     parser = argparse.ArgumentParser(description="QUIC VideoStreamServer server")
     parser.add_argument(
         "app",
@@ -114,17 +86,19 @@ if __name__ == "__main__":
 
     if uvloop is not None:
         uvloop.install()
+
     loop = asyncio.get_event_loop()
     loop.create_task(
         serve(
-            HOST,
-            PORT,
+            args.host,
+            args.port,
             configuration=configuration,
             create_protocol=VideoStreamServerProtocol,
             retry=True,
         )
     )
-    logging.info("About to run server")
+    logging.info(f"Starting Server with VideoStreamServerProtocol on {args.host}:{args.port}")
+
     try:
         loop.run_forever()
     except KeyboardInterrupt:

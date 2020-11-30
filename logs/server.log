@@ -1,0 +1,4 @@
+INFO:root:Starting Server with VideoStreamServerProtocol on 127.0.0.1:40205
+INFO:quic:[417ed01fd50645a3] ALPN negotiated protocol None
+INFO:root:Running command: ffmpeg -i assets/all.mp4 -f image2 -c:v copy -bsf h264_mp4toannexb frames/all%d.h264
+INFO:quic:[417ed01fd50645a3] Connection close code 0x0, reason 

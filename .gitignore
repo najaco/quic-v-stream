@@ -144,3 +144,4 @@ temp/
 frames/
 assets/
 .idea/
+__pycache__/

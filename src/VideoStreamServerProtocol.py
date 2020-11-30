@@ -59,9 +59,11 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
                         end_stream=True,
                     )
                     return
-                file_no_extension = query[1][0:query[1].rfind(".")]
+                file_no_extension = query[1][0 : query[1].rfind(".")]
                 cl_ffmpeg(
                     file_path_mp4, CACHE_PATH, file_prefix=file_no_extension
                 )  # CL Call to ffmpeg
-                self.send_frames(files_path=FILES_PATH, file_name=file_no_extension, event=event)
+                self.send_frames(
+                    files_path=FILES_PATH, file_name=file_no_extension, event=event
+                )
                 self._quic.send_stream_data(event.stream_id, b"", end_stream=True)

@@ -1,23 +1,18 @@
 import argparse
+import asyncio
 import configparser
+import logging
 import shutil
 import signal
 import ssl
-
-import asyncio
-import logging
 import sys
 from pathlib import Path
 from typing import cast, Optional, Dict
-import time
+
 from aioquic.asyncio import connect, QuicConnectionProtocol
 from aioquic.quic import events
 from aioquic.quic.configuration import QuicConfiguration
-import os
 
-from src.objs import Metadata
-from src.objs.packet import Packet
-from src.objs.packet import Frame
 from src.objs.frame_builder import FrameBuilder
 
 try:

@@ -97,7 +97,9 @@ if __name__ == "__main__":
             retry=True,
         )
     )
-    logging.info(f"Starting Server with VideoStreamServerProtocol on {args.host}:{args.port}")
+    logging.info(
+        f"Starting Server with VideoStreamServerProtocol on {args.host}:{args.port}"
+    )
 
     try:
         loop.run_forever()

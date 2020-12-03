@@ -7,7 +7,8 @@ import signal
 import ssl
 import sys
 from pathlib import Path
-from typing import cast, Optional, Dict
+from typing import cast, Optional
+import subprocess
 
 from aioquic.asyncio import connect, QuicConnectionProtocol
 from aioquic.quic import events
@@ -21,7 +22,6 @@ except ImportError:
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-CACHE_PATH: str = config["CLIENT"]["CachePath"]
 ENCODING: str = config["DEFAULT"]["Encoding"]
 FILE_WAIT_TIME: float = float(config["CLIENT"]["FileWaitTime"])
 FILE_MAX_WAIT_TIME: float = float(config["CLIENT"]["FileMaxWaitTime"])
@@ -31,11 +31,22 @@ LOG_PATH: Path = Path(config["CLIENT"]["LogPath"])
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 
 
+def get_vlc_path_for_current_platform(platform: str = sys.platform) ->  Path:
+    if platform == "linux" or platform == "linux2":
+        return Path('vlc')
+    elif platform == "darwin":
+        return Path('/Applications/VLC.app/Contents/MacOS/VLC')
+    elif platform == "win32":
+        return Path('%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe')
+
+# Windows...
+
 class VideoStreamClientProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._ack_waiter: Optional[asyncio.Future[None]] = None
         self.count = 0
+        self.vlc_process = None
 
     async def send_request_for_video(self, filename: str) -> None:
         stream_id = self._quic.get_next_available_stream_id()
@@ -45,6 +56,14 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
         waiter = self._loop.create_future()
         self._ack_waiter = waiter
         self.transmit()
+        vlc_path: Path = get_vlc_path_for_current_platform()
+        if not vlc_path.exists():
+            logging.error(f"vlc was not found at {str(vlc_path)}")
+            return
+        self.vlc_process = subprocess.Popen(
+            [str(vlc_path), "--demux", "h264", "-"],
+            stdin=subprocess.PIPE,
+        )
         return await asyncio.shield(waiter)
 
     def quic_event_received(self, event: events.QuicEvent) -> None:
@@ -61,7 +80,9 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
                 if b"\x00\x00\x01" in event.data:
                     self.count += 1
                     logging.info(f"Detected Beginning of Frame: {self.count}")
-                sys.stdout.buffer.write(event.data)
+                # self.vlc_process.communicate(input=event.data)
+                self.vlc_process.stdin.write(event.data)
+                # sys.stdout.buffer.write(event.data)
 
 
 async def run(
@@ -88,7 +109,6 @@ if __name__ == "__main__":
     Path(LOG_PATH).parent.mkdir(
         parents=True, exist_ok=True
     )  # create directory if it does not exist
-    Path(CACHE_PATH).mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         filename=str(LOG_PATH),
         format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",

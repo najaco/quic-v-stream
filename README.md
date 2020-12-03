@@ -21,5 +21,5 @@ python -m src.server -c <certificate> -k <private_key> --host <ip_addr> --port <
 
 ### Run client
 ```sh
-python -m src.client --host <ip_addr> --port <port_no> --request <file> | vlc --demux h264 -
+python -m src.client --host <ip_addr> --port <port_no> --request <file>
 ```

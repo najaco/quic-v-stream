@@ -21,6 +21,8 @@ config = configparser.ConfigParser()
 config.read("config.ini")
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 LOG_PATH: Path = Path(config["SERVER"]["LogPath"])
+# LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
+# LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 CACHE_PATH: Path = Path(config["SERVER"]["CachePath"])
 
 
@@ -35,7 +37,12 @@ if __name__ == "__main__":
     LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
-    logging.basicConfig(filename=str(LOG_PATH), level=logging.INFO)
+    logging.basicConfig(
+        filename=str(LOG_PATH),
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     configuration = QuicConfiguration(
         is_client=False, max_datagram_frame_size=MAX_DATAGRAM_SIZE
@@ -105,3 +112,5 @@ if __name__ == "__main__":
         loop.run_forever()
     except KeyboardInterrupt:
         pass
+
+    logging.info("Program Terminated")

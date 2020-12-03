@@ -6,6 +6,7 @@ from pathlib import Path
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic import events
 from aioquic.quic.events import StreamDataReceived
+import shutil
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -32,22 +33,21 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def send_frames(self, files_path: Path, file_name: str, event: events.QuicEvent):
+    def send_frames(self, frames_path: Path, file_name: str, event: events.QuicEvent):
         frame_no = 1  # might need to be 1
-        while (CACHE_PATH / f"{file_name}{frame_no}.h264").exists():
+        while (frames_path / f"{file_name}{frame_no}.h264").exists():
+            logging.info(f"Frame {frame_no} sent ")
             self._quic.send_stream_data(
                 event.stream_id,
-                data=(CACHE_PATH / f"{file_name}{frame_no}.h264").open("rb").read(),
+                data=(frames_path / f"{file_name}{frame_no}.h264").open("rb").read(),
                 end_stream=False,
             )
             frame_no += 1
             self.transmit()
 
     def quic_event_received(self, event: events.QuicEvent) -> None:
-        print(f"QUIC EVENT RECEIVED\tType={type(event)}")
         if isinstance(event, StreamDataReceived):
             data = event.data.decode(ENCODING)
-            print(f"Data = {data}")
             query = data.split()
             if query[0] == "GET":
                 file_path_mp4: Path = FILES_PATH / f"{query[1]}"
@@ -60,10 +60,17 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
                     )
                     return
                 file_no_extension = query[1][0 : query[1].rfind(".")]
+                session_cache_path = CACHE_PATH / str(event.stream_id)
+
                 cl_ffmpeg(
-                    file_path_mp4, CACHE_PATH, file_prefix=file_no_extension
+                    file_path_mp4, session_cache_path, file_prefix=file_no_extension
                 )  # CL Call to ffmpeg
                 self.send_frames(
-                    files_path=FILES_PATH, file_name=file_no_extension, event=event
+                    frames_path=session_cache_path,
+                    file_name=file_no_extension,
+                    event=event,
                 )
                 self._quic.send_stream_data(event.stream_id, b"", end_stream=True)
+                logging.info(f"Stream Session {event.stream_id} has ended")
+                logging.info(f"Removing {session_cache_path}")
+                shutil.rmtree(session_cache_path)  # double check that this works

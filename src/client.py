@@ -26,6 +26,8 @@ ENCODING: str = config["DEFAULT"]["Encoding"]
 FILE_WAIT_TIME: float = float(config["CLIENT"]["FileWaitTime"])
 FILE_MAX_WAIT_TIME: float = float(config["CLIENT"]["FileMaxWaitTime"])
 LOG_PATH: Path = Path(config["CLIENT"]["LogPath"])
+# LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
+# LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 
 
@@ -33,6 +35,7 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._ack_waiter: Optional[asyncio.Future[None]] = None
+        self.count = 0
 
     async def send_request_for_video(self, filename: str) -> None:
         stream_id = self._quic.get_next_available_stream_id()
@@ -47,12 +50,17 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
     def quic_event_received(self, event: events.QuicEvent) -> None:
         if self._ack_waiter is not None:
             if isinstance(event, events.StreamDataReceived):
+                # logging.info(f"StreamDataReceived: {self.count}\t LEN = {len(event.data)}")
                 if event.end_stream:
                     waiter = self._ack_waiter
                     self._ack_waiter = None
                     waiter.set_result(None)
-                    logging.info(f"Data received = {event.data}")
+                    logging.info(f"End Stream Detected")
                     return
+                # for i in range(0, event.data.count(b"\x00\x00\x01")):
+                if b"\x00\x00\x01" in event.data:
+                    self.count += 1
+                    logging.info(f"Detected Beginning of Frame: {self.count}")
                 sys.stdout.buffer.write(event.data)
 
 
@@ -81,7 +89,12 @@ if __name__ == "__main__":
         parents=True, exist_ok=True
     )  # create directory if it does not exist
     Path(CACHE_PATH).mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(filename=str(LOG_PATH), level=logging.INFO)
+    logging.basicConfig(
+        filename=str(LOG_PATH),
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     defaults = QuicConfiguration(
         is_client=True, max_datagram_frame_size=MAX_DATAGRAM_SIZE
@@ -122,3 +135,4 @@ if __name__ == "__main__":
             requested_video=args.request,
         )
     )
+    logging.info("Program Terminated")

@@ -25,19 +25,20 @@ config.read("config.ini")
 ENCODING: str = config["DEFAULT"]["Encoding"]
 FILE_WAIT_TIME: float = float(config["CLIENT"]["FileWaitTime"])
 FILE_MAX_WAIT_TIME: float = float(config["CLIENT"]["FileMaxWaitTime"])
-LOG_PATH: Path = Path(config["CLIENT"]["LogPath"])
+DEFAULT_LOG_PATH: str = str(config["CLIENT"]["LogPath"])
 # LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
 # LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 
 
-def get_vlc_path_for_current_platform(platform: str = sys.platform) ->  Path:
+def get_vlc_path_for_current_platform(platform: str = sys.platform) -> Path:
     if platform == "linux" or platform == "linux2":
         return Path('vlc')
     elif platform == "darwin":
         return Path('/Applications/VLC.app/Contents/MacOS/VLC')
     elif platform == "win32":
         return Path('%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe')
+
 
 # Windows...
 
@@ -86,35 +87,24 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
 
 
 async def run(
-    config: QuicConfiguration, host: str, port: int, requested_video: str
+        config: QuicConfiguration, host: str, port: int, requested_video: str
 ) -> None:
     async with connect(
-        host=host,
-        port=port,
-        configuration=config,
-        create_protocol=VideoStreamClientProtocol,
+            host=host,
+            port=port,
+            configuration=config,
+            create_protocol=VideoStreamClientProtocol,
     ) as client:
         client = cast(VideoStreamClientProtocol, client)
         await client.send_request_for_video(requested_video)
 
 
 def clean_up(sig, frame):
-    logging.info(f"Skipping Removal of {CACHE_PATH}")
-    shutil.rmtree(CACHE_PATH)
     sys.exit(0)
 
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, clean_up)
-    Path(LOG_PATH).parent.mkdir(
-        parents=True, exist_ok=True
-    )  # create directory if it does not exist
-    logging.basicConfig(
-        filename=str(LOG_PATH),
-        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-        level=logging.INFO,
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     defaults = QuicConfiguration(
         is_client=True, max_datagram_frame_size=MAX_DATAGRAM_SIZE
@@ -136,7 +126,26 @@ if __name__ == "__main__":
     parser.add_argument(
         "-r", "--request", type=str, default="", help="Video to request",
     )
+    parser.add_argument(
+        "-l",
+        "--log",
+        type=str,
+        default=DEFAULT_LOG_PATH,
+        help="file to send logging information to",
+    )
+
     args = parser.parse_args()
+
+    # Set Up Logging
+    # Set Up Logging
+    log_path = Path(args.log)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=str(log_path),
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     configuration = QuicConfiguration(is_client=True)
     configuration.verify_mode = ssl.CERT_NONE

@@ -20,7 +20,7 @@ except ImportError:
 config = configparser.ConfigParser()
 config.read("config.ini")
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
-LOG_PATH: Path = Path(config["SERVER"]["LogPath"])
+DEFAULT_LOG_PATH: str = config["SERVER"]["LogPath"]
 # LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
 # LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 CACHE_PATH: Path = Path(config["SERVER"]["CachePath"])
@@ -33,16 +33,6 @@ def clean_up(sig, frame):
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, clean_up)  # set ctrl-c signal
-
-    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    CACHE_PATH.mkdir(parents=True, exist_ok=True)
-
-    logging.basicConfig(
-        filename=str(LOG_PATH),
-        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
-        level=logging.INFO,
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     configuration = QuicConfiguration(
         is_client=False, max_datagram_frame_size=MAX_DATAGRAM_SIZE
@@ -83,11 +73,24 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-l",
-        "--secrets-log",
+        "--log",
         type=str,
-        help="log secrets to a file, for use with Wireshark",
+        default=DEFAULT_LOG_PATH,
+        help="file to send logging information to",
     )
     args = parser.parse_args()
+
+    CACHE_PATH.mkdir(parents=True, exist_ok=True)
+
+    # Set Up Logging
+    log_path = Path(args.log)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=str(log_path),
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
     configuration.load_cert_chain(args.certificate, args.private_key)
 

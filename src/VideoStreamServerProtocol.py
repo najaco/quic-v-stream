@@ -34,8 +34,16 @@ def cl_ffmpeg(file_path: Path, cache_path: Path):
 
 
 class VideoStreamRequestHandler:
-    def __init__(self, protocol: QuicConnectionProtocol, connection: QuicConnection, stream_ended: bool, stream_id: int,
-                 transmit: Callable[[], None], file_to_serve: Path, cache_path: Path):
+    def __init__(
+        self,
+        protocol: QuicConnectionProtocol,
+        connection: QuicConnection,
+        stream_ended: bool,
+        stream_id: int,
+        transmit: Callable[[], None],
+        file_to_serve: Path,
+        cache_path: Path,
+    ):
         self.protocol = protocol
         self.connection = connection
         self.stream_id = stream_id
@@ -65,7 +73,9 @@ class VideoStreamRequestHandler:
             # TODO: with open file for better practice
             self.connection.send_stream_data(
                 self.stream_id,
-                data=(self.cache_path / f"{file_prefix}{frame_no}.h264").open("rb").read()
+                data=(self.cache_path / f"{file_prefix}{frame_no}.h264")
+                .open("rb")
+                .read(),
             )
             frame_no += 1
             self.transmit()
@@ -95,8 +105,14 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
                     return
                 session_cache_path = CACHE_PATH / str(event.stream_id)
 
-                handler = VideoStreamRequestHandler(connection=self._quic, protocol=self, stream_ended=False,
-                                                    stream_id=event.stream_id, transmit=self.transmit,
-                                                    file_to_serve=file_to_serve, cache_path=session_cache_path)
+                handler = VideoStreamRequestHandler(
+                    connection=self._quic,
+                    protocol=self,
+                    stream_ended=False,
+                    stream_id=event.stream_id,
+                    transmit=self.transmit,
+                    file_to_serve=file_to_serve,
+                    cache_path=session_cache_path,
+                )
                 self._handlers[event.stream_id] = handler
                 asyncio.ensure_future(handler.stream())

@@ -33,11 +33,12 @@ MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 
 def get_vlc_path_for_current_platform(platform: str = sys.platform) -> Path:
     if platform == "linux" or platform == "linux2":
-        return Path('vlc')
+        return Path("vlc")
     elif platform == "darwin":
-        return Path('/Applications/VLC.app/Contents/MacOS/VLC')
+        return Path("/Applications/VLC.app/Contents/MacOS/VLC")
     elif platform == "win32":
-        return Path('%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe')
+        return Path("%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe")
+
 
 class VideoStreamClientProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
@@ -59,8 +60,7 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
             logging.error(f"vlc was not found at {str(vlc_path)}")
             return
         self.vlc_process = subprocess.Popen(
-            [str(vlc_path), "--demux", "h264", "-"],
-            stdin=subprocess.PIPE,
+            [str(vlc_path), "--demux", "h264", "-"], stdin=subprocess.PIPE,
         )
         return await asyncio.shield(waiter)
 
@@ -75,20 +75,22 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
                     logging.info(f"End Stream Detected")
                     return
                 for i in range(0, event.data.count(b"\x00\x00\x01")):
-                # if b"\x00\x00\x01" in event.data:
+                    # if b"\x00\x00\x01" in event.data:
                     self.count += 1
-                    logging.info(f"Detected Beginning of Frame: {self.count} at {int(time.time() * 1000)}ms")
+                    logging.info(
+                        f"Detected Beginning of Frame: {self.count} at {int(time.time() * 1000)}ms"
+                    )
                 self.vlc_process.stdin.write(event.data)
 
 
 async def run(
-        config: QuicConfiguration, host: str, port: int, requested_video: str
+    config: QuicConfiguration, host: str, port: int, requested_video: str
 ) -> None:
     async with connect(
-            host=host,
-            port=port,
-            configuration=config,
-            create_protocol=VideoStreamClientProtocol,
+        host=host,
+        port=port,
+        configuration=config,
+        create_protocol=VideoStreamClientProtocol,
     ) as client:
         client = cast(VideoStreamClientProtocol, client)
         await client.send_request_for_video(requested_video)

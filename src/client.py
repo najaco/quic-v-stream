@@ -2,13 +2,13 @@ import argparse
 import asyncio
 import configparser
 import logging
-import shutil
 import signal
 import ssl
+import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import cast, Optional
-import subprocess
 
 from aioquic.asyncio import connect, QuicConnectionProtocol
 from aioquic.quic import events
@@ -38,9 +38,6 @@ def get_vlc_path_for_current_platform(platform: str = sys.platform) -> Path:
         return Path('/Applications/VLC.app/Contents/MacOS/VLC')
     elif platform == "win32":
         return Path('%PROGRAMFILES%\\VideoLAN\\VLC\\vlc.exe')
-
-
-# Windows...
 
 class VideoStreamClientProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
@@ -77,13 +74,11 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
                     waiter.set_result(None)
                     logging.info(f"End Stream Detected")
                     return
-                # for i in range(0, event.data.count(b"\x00\x00\x01")):
-                if b"\x00\x00\x01" in event.data:
+                for i in range(0, event.data.count(b"\x00\x00\x01")):
+                # if b"\x00\x00\x01" in event.data:
                     self.count += 1
-                    logging.info(f"Detected Beginning of Frame: {self.count}")
-                # self.vlc_process.communicate(input=event.data)
+                    logging.info(f"Detected Beginning of Frame: {self.count} at {int(time.time() * 1000)}ms")
                 self.vlc_process.stdin.write(event.data)
-                # sys.stdout.buffer.write(event.data)
 
 
 async def run(

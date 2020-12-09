@@ -1,12 +1,13 @@
 import configparser
 import logging
 import os
+import shutil
+import time
 from pathlib import Path
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic import events
 from aioquic.quic.events import StreamDataReceived
-import shutil
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -36,7 +37,8 @@ class VideoStreamServerProtocol(QuicConnectionProtocol):
     def send_frames(self, frames_path: Path, file_name: str, event: events.QuicEvent):
         frame_no = 1  # might need to be 1
         while (frames_path / f"{file_name}{frame_no}.h264").exists():
-            logging.info(f"Frame {frame_no} sent ")
+            time.sleep(1/30) # sleep - simulates 30 fps
+            logging.info(f"Frame {frame_no} sent at {int(time.time() * 1000)}ms")
             self._quic.send_stream_data(
                 event.stream_id,
                 data=(frames_path / f"{file_name}{frame_no}.h264").open("rb").read(),

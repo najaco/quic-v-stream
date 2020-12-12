@@ -26,8 +26,6 @@ ENCODING: str = config["DEFAULT"]["Encoding"]
 FILE_WAIT_TIME: float = float(config["CLIENT"]["FileWaitTime"])
 FILE_MAX_WAIT_TIME: float = float(config["CLIENT"]["FileMaxWaitTime"])
 DEFAULT_LOG_PATH: str = str(config["CLIENT"]["LogPath"])
-# LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
-# LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 
 

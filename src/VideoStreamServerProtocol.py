@@ -1,16 +1,16 @@
+import asyncio
 import configparser
 import logging
 import os
 import shutil
 import time
-import asyncio
 from pathlib import Path
 from typing import Dict, Callable, Union
 
 from aioquic.asyncio import QuicConnectionProtocol
 from aioquic.quic import events
-from aioquic.quic.events import StreamDataReceived
 from aioquic.quic.connection import QuicConnection
+from aioquic.quic.events import StreamDataReceived
 
 config = configparser.ConfigParser()
 config.read("config.ini")

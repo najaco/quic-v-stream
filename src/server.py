@@ -21,8 +21,6 @@ config = configparser.ConfigParser()
 config.read("config.ini")
 MAX_DATAGRAM_SIZE = int(config["DEFAULT"]["MaxDatagramSize"])
 DEFAULT_LOG_PATH: str = config["SERVER"]["LogPath"]
-# LOG_FORMAT: str = config["DEFAULT"]["LogFormat"]
-# LOG_DATE_FORMAT: str = config["DEFAULT"]["LogFormat"]
 CACHE_PATH: Path = Path(config["SERVER"]["CachePath"])
 
 

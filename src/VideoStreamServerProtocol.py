@@ -69,15 +69,19 @@ class VideoStreamRequestHandler:
     async def send_frames(self):
         logging.info("Beginning to send frames!")
         file_prefix = self.file_to_serve.stem
-        frame_no = 1
-        while (self.cache_path / f"{file_prefix}{frame_no}.h264").exists():
+        frame_no: int = 1
+        file_no: int = 1
+        while (self.cache_path / f"{file_prefix}{file_no}.h264").exists():
             await asyncio.sleep(1 / FPS)
-            logging.info(f"Frame {frame_no} sent at {int(time.time() * 1000)}ms")
-            with (self.cache_path / f"{file_prefix}{frame_no}.h264").open(
-                "rb"
-            ) as frame:
-                self.connection.send_stream_data(self.stream_id, data=frame.read())
-            frame_no += 1
+            with (self.cache_path / f"{file_prefix}{file_no}.h264").open("rb") as frame:
+                data = frame.read()
+                for i in range(0, data.count(b"\x00\x00\x01")):
+                    logging.info(
+                        f"Frame {frame_no} sent at {int(time.time() * 1000)}ms"
+                    )
+                    frame_no += 1
+                self.connection.send_stream_data(self.stream_id, data=data)
+            file_no += 1
             self.transmit()
 
 

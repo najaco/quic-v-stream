@@ -75,7 +75,6 @@ class VideoStreamClientProtocol(QuicConnectionProtocol):
                     logging.info(f"End Stream Detected")
                     return
                 for i in range(0, event.data.count(b"\x00\x00\x01")):
-                    # if b"\x00\x00\x01" in event.data:
                     self.count += 1
                     logging.info(
                         f"Detected Beginning of Frame: {self.count} at {int(time.time() * 1000)}ms"

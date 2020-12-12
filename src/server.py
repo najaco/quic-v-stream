@@ -78,6 +78,7 @@ if __name__ == "__main__":
         default=DEFAULT_LOG_PATH,
         help="file to send logging information to",
     )
+
     args = parser.parse_args()
 
     CACHE_PATH.mkdir(parents=True, exist_ok=True)

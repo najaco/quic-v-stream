@@ -17,18 +17,19 @@ config.read("config.ini")
 
 CACHE_PATH: Path = Path(config["SERVER"]["CachePath"])
 ENCODING = config["DEFAULT"]["Encoding"]
+FPS: int = int(config["DEFAULT"]["FPS"])
 
 FILES_PATH = Path(config["SERVER"]["FilesPath"])
 MAX_DATAGRAM_SIZE = 65536
 
 
-def cl_ffmpeg(file_path: Path, cache_path: Path):
+def cl_ffmpeg(file_path: Path, cache_path: Path, fps: int):
     cache_path.mkdir(parents=True, exist_ok=True)
     if not cache_path.is_dir():
         raise Exception(
             "{} must not already exist as a non directory".format(cache_path)
         )
-    cmd = f"ffmpeg -i {str(file_path)} -f image2 -c:v copy -bsf h264_mp4toannexb {str(cache_path)}/{file_path.stem}%d.h264"
+    cmd = f"ffmpeg -i {str(file_path)} -r {fps} -f image2 -c:v copy -bsf h264_mp4toannexb {str(cache_path)}/{file_path.stem}%d.h264"
     logging.info(f"Running command: {cmd}")
     os.system(cmd)
 
@@ -56,7 +57,9 @@ class VideoStreamRequestHandler:
             self.queue.put_nowait({"type": "videostream.request"})
 
     async def stream(self):
-        cl_ffmpeg(self.file_to_serve, self.cache_path)  # CL Call to ffmpeg
+        cl_ffmpeg(
+            file_path=self.file_to_serve, cache_path=self.cache_path, fps=FPS
+        )  # CL Call to ffmpeg
         await self.send_frames()
         self.connection.send_stream_data(self.stream_id, b"", end_stream=True)
         logging.info(f"Stream Session {self.stream_id} has ended")
@@ -66,9 +69,9 @@ class VideoStreamRequestHandler:
     async def send_frames(self):
         logging.info("Beginning to send frames!")
         file_prefix = self.file_to_serve.stem
-        frame_no = 1  # might need to be 1
+        frame_no = 1
         while (self.cache_path / f"{file_prefix}{frame_no}.h264").exists():
-            await asyncio.sleep(1 / 30)
+            await asyncio.sleep(1 / FPS)
             logging.info(f"Frame {frame_no} sent at {int(time.time() * 1000)}ms")
             # TODO: with open file for better practice
             self.connection.send_stream_data(

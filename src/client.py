@@ -134,7 +134,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set Up Logging
-    # Set Up Logging
     log_path = Path(args.log)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(

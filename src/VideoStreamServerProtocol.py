@@ -73,13 +73,10 @@ class VideoStreamRequestHandler:
         while (self.cache_path / f"{file_prefix}{frame_no}.h264").exists():
             await asyncio.sleep(1 / FPS)
             logging.info(f"Frame {frame_no} sent at {int(time.time() * 1000)}ms")
-            # TODO: with open file for better practice
-            self.connection.send_stream_data(
-                self.stream_id,
-                data=(self.cache_path / f"{file_prefix}{frame_no}.h264")
-                .open("rb")
-                .read(),
-            )
+            with (self.cache_path / f"{file_prefix}{frame_no}.h264").open(
+                "rb"
+            ) as frame:
+                self.connection.send_stream_data(self.stream_id, data=frame.read())
             frame_no += 1
             self.transmit()
 

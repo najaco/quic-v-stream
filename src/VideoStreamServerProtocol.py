@@ -62,8 +62,9 @@ class VideoStreamRequestHandler:
         )  # CL Call to ffmpeg
         await self.send_frames()
         self.connection.send_stream_data(self.stream_id, b"", end_stream=True)
-        logging.info(f"Stream Session {self.stream_id} has ended")
-        logging.info(f"Removing {self.cache_path}")
+        logging.info(
+            f"Stream Session {self.stream_id} has ended. Removing {self.cache_path}"
+        )
         shutil.rmtree(self.cache_path)  # double check that this works
 
     async def send_frames(self):
